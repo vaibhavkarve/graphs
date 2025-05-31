@@ -1,0 +1,38 @@
+[project]
+name = "graphs"
+version = "0.1.0"
+description = "A research-oriented graph theory toolset"
+requires-python = ">=3.13"
+
+[tool.uv]
+# No specific config needed yet
+
+[tool.ruff]
+line-length = 88
+select = ["ALL"]
+ignore = []
+target-version = "py313"
+
+[tool.mypy]
+strict = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_optional = true
+
+[tool.pyright]
+include = ["graphs"]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "--strict-markers --tb=short -q"
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+extend-select = ["I", "N", "D"]
+fixable = ["ALL"]
+unfixable = []
