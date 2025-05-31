@@ -24,13 +24,13 @@ jobs:
         run: uv venv; uv pip install .
 
       - name: Lint
-        run: ruff check graphs tests
+        run: .venv/bin/ruff check graphs tests
 
       - name: Typecheck (mypy)
-        run: mypy graphs
+        run: .venv/bin/mypy graphs
 
       - name: Typecheck (pyright)
-        run: pyright graphs
+        run: .venv/bin/pyright graphs
 
       - name: Run Tests
-        run: pytest
+        run: .venv/bin/pytest
