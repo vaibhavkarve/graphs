@@ -1,9 +1,9 @@
 list:
     @just --list
 
-init:
+install:
     uv venv
-    uv pip install -r requirements.txt
+    uv pip install -e .
 
 lint:
     ruff check graphs tests
