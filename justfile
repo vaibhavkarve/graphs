@@ -6,19 +6,19 @@ install:
     uv pip install -e .
 
 lint:
-    ruff check graphs tests
+    .venv/bin/ruff check graphs tests
 
 typecheck:
-    pyright graphs
-    mypy graphs
+    .venv/bin/pyright graphs tests
+    .venv/bin/mypy graphs tests
 
 test:
-    pytest
+    .venv/bin/pytest tests
 
 all: lint typecheck test
 
 notebook:
-    marimo run
+    .venv/bin/marimo run
 
 watch:
-    pytest --maxfail=1 --disable-warnings -x -q --tb=short --looponfail
+    .venv/bin/pytest --maxfail=1 --disable-warnings -x -q --tb=short --looponfail
