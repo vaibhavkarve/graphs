@@ -14,8 +14,6 @@ dependencies = [
 
 [tool.ruff]
 line-length = 88
-select = ["ALL"]
-ignore = []
 target-version = "py313"
 
 [tool.mypy]
@@ -41,3 +39,5 @@ testpaths = ["tests"]
 extend-select = ["I", "N", "D"]
 fixable = ["ALL"]
 unfixable = []
+select = ["ALL"]
+ignore = []
