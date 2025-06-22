@@ -1,24 +1,27 @@
+set dotenv-path := ".envrc"
+
 list:
     @just --list
 
 install:
     uv venv
-    uv pip install -e .
+    uv sync
 
 lint:
-    .venv/bin/ruff check graphs tests
+    uv run ruff format graphs tests
+    uv run ruff check graphs tests
 
 typecheck:
-    .venv/bin/pyright graphs tests
-    .venv/bin/mypy graphs tests
+    uv run mypy graphs tests
+    uv run pyright --threads graphs tests
 
-test:
-    .venv/bin/pytest tests
+test flags="-xvvs":
+    uv run python -m slipcover -m pytest tests {{ flags }}
 
 all: lint typecheck test
 
 notebook:
-    .venv/bin/marimo run
+    uv run marimo run
 
 watch:
-    .venv/bin/pytest --maxfail=1 --disable-warnings -x -q --tb=short --looponfail
+    uv run pytest --maxfail=1 --disable-warnings -x -q --tb=short --looponfail
