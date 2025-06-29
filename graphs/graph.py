@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable, Iterable, KeysView, Mapping
-from typing import Final, Literal
+from collections.abc import Callable, Generator, Iterable, KeysView, Mapping
+from typing import Final, cast
+
+from loguru import logger
 
 from graphs.exceptions import EdgeSizeError, NotInVertexSetError
 
@@ -41,14 +43,20 @@ class Graph[T]:
         return Graph(vertices, edges)
 
     def __repr__(self) -> str:
-        return f"Graph(vertices={set(self.vertices)}, edges=" + str(
-            {str(set(e)) for e in self.edges},
-        ).replace("'", "")
+        return (
+            f"Graph(vertices={set(self.vertices)}, edges="
+            + str(
+                {str(set(e)) for e in self.edges},
+            ).replace("'", "")
+            + ")"
+        )
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Graph):
             # Let's assume that both graphs share the same typevar.
-            return self.vertices == other.vertices and self.edges == other.edges  # pyright: ignore[reportUnknownMemberType]
+            return self.vertices == cast(
+                "frozenset[T]", other.vertices
+            ) and self.edges == cast("frozenset[frozenset[T]]", other.edges)
         return NotImplemented
 
     @staticmethod
@@ -69,7 +77,7 @@ class Graph[T]:
         assert start_vertex in self.vertices
         processing_queue: deque[T] = deque([start_vertex])
         parent_dict: dict[T, T] = {start_vertex: start_vertex}
-        bfs_sequence: list[T] = []
+        bfs_sequence: list[T] = [start_vertex]
         neighbor_map: dict[T, frozenset[T]] = self.neighbor_map()
         while processing_queue:
             v: T = processing_queue.popleft()
@@ -95,19 +103,49 @@ class Graph[T]:
         )
         return path
 
-    def is_connected(self) -> Literal[True] | list[Graph[T]]:
-        if not self.vertices:
-            return True  # Empty graph is vacuously connected.
-        start_vertex, *_ = self.vertices
+    def induced_subgraph(self, vertices: Iterable[T]) -> Graph[T]:
+        vertexset: frozenset[T] = frozenset(vertices)
+        assert vertexset <= self.vertices
+        return Graph(vertexset, [e for e in self.edges if e <= vertexset])
 
+    def difference(self, other: Graph[T]) -> Graph[T]:
+        common_vertices: frozenset[T] = self.vertices & other.vertices
+        return Graph(
+            self.vertices - common_vertices,
+            {e for e in self.edges if e.isdisjoint(common_vertices)},
+        )
+
+    def _connected_bfs_sequence(self, vertex: T) -> list[T]:
         def goal_to_force_full_exploration(_: T) -> bool:
             return False
 
         path, bfs_sequence = self.breadth_first_search(
-            start_vertex, goal_to_force_full_exploration
+            vertex, goal_to_force_full_exploration
         )
         assert path is None
         assert bfs_sequence
-        if len(bfs_sequence) == len(self.vertices):
-            return True
-        return False
+        return bfs_sequence
+
+    def is_connected(self) -> bool:
+        if not self.vertices:
+            return False  # Empty graph is disconnected.
+
+        start_vertex, *_ = self.vertices  # Pick an arbitrary vertex.
+        logger.debug(f"{self = }, {start_vertex = }")
+
+        bfs_sequence: list[T] = self._connected_bfs_sequence(start_vertex)
+        return len(bfs_sequence) == len(self.vertices)
+
+    def components(self) -> Generator[Graph[T]]:
+        if not self.vertices:
+            return  # Empty graph is disconnected.
+
+        start_vertex, *_ = self.vertices  # Pick an arbitrary vertex.
+        logger.debug(f"{self = }, {start_vertex = }")
+
+        bfs_sequence: list[T] = self._connected_bfs_sequence(start_vertex)
+        component: Graph[T] = self.induced_subgraph(vertices=bfs_sequence)
+        yield component
+
+        remainder: Graph[T] = self.difference(component)
+        yield from remainder.components()

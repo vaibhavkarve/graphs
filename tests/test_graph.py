@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Final
 
 import more_itertools as mit
 import pytest
-from hypothesis import assume, given
+from hypothesis import given
 from hypothesis import strategies as st
 from sympy.sets.sets import EmptySet, FiniteSet
 
@@ -94,21 +94,47 @@ def test_complete_graph(n: int) -> None:
     k_n: Graph[int] = complete_graph(n)
     assert mit.ilen(k_n.vertices) == n
     assert mit.ilen(k_n.edges) == comb(n, 2)
-    assert k_n.is_connected()
+    assert k_n.components()
 
 
-@given(int_graphs().filter(lambda g: g.vertices))
+@given(int_graphs().filter(lambda g: g.vertices and g.is_connected()))
 def test_shortest_path(g: Graph[int]) -> None:
     start_vertex: int = min(g.vertices)
     goal_vertex: int = max(g.vertices)
     path: deque[int] | None = g.shortest_path(start_vertex, goal_vertex)
 
-    assume(path)
     assert path
+
     assert path[0] == start_vertex
     assert path[-1] == goal_vertex
     for v, w in it.pairwise(path):
         assert frozenset({v, w}) in g.edges
+
+
+@given(int_graphs().filter(lambda g: g.is_connected()))
+def test_components_assume_connected(g: Graph[int]) -> None:
+    components: list[Graph[int]] = list(g.components())
+    assert len(components) == 1
+    assert components[0] == g
+
+
+@given(int_graphs().filter(lambda g: not g.is_connected()))
+def test_components_assume_disconnected(g: Graph[int]) -> None:
+    components: list[Graph[int]] = list(g.components())
+
+    if not g.vertices:
+        # This must be the empty graph.
+        assert not g.edges
+        assert not components
+        return  # Early exit.
+
+    assert len(components) > 1
+    assert set().union(*[c.vertices for c in components]) == g.vertices
+    assert set().union(*[c.edges for c in components]) == g.edges
+    for c in components:
+        c_components = list(c.components())
+        assert len(c_components) == 1
+        assert c_components[0] == c
 
 
 def test_symgraph() -> None:
